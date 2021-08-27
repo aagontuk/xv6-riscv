@@ -15,3 +15,7 @@ mkfs
 kernel/kernel
 user/usys.S
 .gdbinit
+*.out
+*.files
+compile_commands.json
+.clangd
