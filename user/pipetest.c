@@ -9,12 +9,12 @@
 int main(void) {
     int p[2];
     int pid;
+    int start, end;
     int nsend = DATASIZE/(BUFSIZE*4);
     int nbytes, tbytes = 0;
     int writebuffer[BUFSIZE];
     int readbuffer[BUFSIZE];
 
-    printf("ticks: %d\n", uptime());
     if (pipe(p)) {
         fprintf(2, "pipe() failed!\n");
         exit(-1);
@@ -38,14 +38,16 @@ int main(void) {
     }
     else {
         close(p[1]);
+	start = uptime();
         for (int n = 0; n < nsend; n++) {
             nbytes = read(p[0], (void *)readbuffer, sizeof(int)*BUFSIZE);
             tbytes += nbytes;
         }
+	end = uptime();
         close(p[0]);
         wait((int *)0);
-        fprintf(1, "Read: %d\n", tbytes);
-        printf("ticks: %d\n", uptime());
+        fprintf(1, "Received: %d bytes in ", tbytes);
+	fprintf(1, "%d ticks.\n", end - start);
     }
     
     exit(0);
