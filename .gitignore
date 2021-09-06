@@ -19,3 +19,4 @@ user/usys.S
 *.files
 compile_commands.json
 .clangd
+*.swp
