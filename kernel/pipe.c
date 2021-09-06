@@ -98,12 +98,6 @@ pipewrite(struct pipe *pi, uint64 addr, int n)
         wsize = PIPESIZE;
       if((pi->nread % PIPESIZE) != 0 && wsize > (pi->nread % PIPESIZE))
         wsize = pi->nread % PIPESIZE;
-      /* Problematic comparisons
-      if(wsize > (pi->nwrite - pi->nread))
-        wsize = pi->nwrite - pi->nread;
-      if(wsize > (pi->nread % PIPESIZE))
-        wsize = pi->nread % PIPESIZE;
-      */
 
       char data[PIPESIZE];
       if(copyin(pr->pagetable, data, addr + i, wsize) == -1)
@@ -122,9 +116,8 @@ pipewrite(struct pipe *pi, uint64 addr, int n)
 int
 piperead(struct pipe *pi, uint64 addr, int n)
 {
-  int i;
+  int i = 0;
   struct proc *pr = myproc();
-  char ch;
 
   acquire(&pi->lock);
   while(pi->nread == pi->nwrite && pi->writeopen){  //DOC: pipe-empty
@@ -134,12 +127,26 @@ piperead(struct pipe *pi, uint64 addr, int n)
     }
     sleep(&pi->nread, &pi->lock); //DOC: piperead-sleep
   }
-  for(i = 0; i < n; i++){  //DOC: piperead-copy
+  while(i < n){  //DOC: piperead-copy
     if(pi->nread == pi->nwrite)
       break;
-    ch = pi->data[pi->nread++ % PIPESIZE];
-    if(copyout(pr->pagetable, addr + i, &ch, 1) == -1)
+
+    /* find maximum size that can be read at a time */
+    int rsize = INT_MAX;
+    if(rsize > n)
+      rsize = n;
+    if(rsize > PIPESIZE)
+      rsize = PIPESIZE;
+    if((pi->nwrite % PIPESIZE) != 0 && rsize > (pi->nwrite % PIPESIZE))
+      rsize = pi->nwrite % PIPESIZE;
+
+    char rbuff[PIPESIZE];
+    memmove(rbuff, pi->data + (pi->nread % PIPESIZE), rsize);
+    pi->nread += rsize;
+    if(copyout(pr->pagetable, addr + i, rbuff, rsize) == -1)
       break;
+
+    i+=rsize;
   }
   wakeup(&pi->nwrite);  //DOC: piperead-wakeup
   release(&pi->lock);
