@@ -89,11 +89,28 @@ pipewrite(struct pipe *pi, uint64 addr, int n)
       wakeup(&pi->nread);
       sleep(&pi->nwrite, &pi->lock);
     } else {
-      char ch;
-      if(copyin(pr->pagetable, &ch, addr + i, 1) == -1)
+      int wsize = INT_MAX;
+
+      // Maximum length of data that can be written in one go
+      if(wsize > n)
+        wsize = n;
+      if(wsize > PIPESIZE)
+        wsize = PIPESIZE;
+      if((pi->nread % PIPESIZE) != 0 && wsize > (pi->nread % PIPESIZE))
+        wsize = pi->nread % PIPESIZE;
+      /* Problematic comparisons
+      if(wsize > (pi->nwrite - pi->nread))
+        wsize = pi->nwrite - pi->nread;
+      if(wsize > (pi->nread % PIPESIZE))
+        wsize = pi->nread % PIPESIZE;
+      */
+
+      char data[PIPESIZE];
+      if(copyin(pr->pagetable, data, addr + i, wsize) == -1)
         break;
-      pi->data[pi->nwrite++ % PIPESIZE] = ch;
-      i++;
+      memmove(pi->data + (pi->nwrite % PIPESIZE), data, wsize);
+      pi->nwrite += wsize;
+      i += wsize;
     }
   }
   wakeup(&pi->nread);

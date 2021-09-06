@@ -1,3 +1,5 @@
+#define INT_MAX 2147483647
+
 typedef unsigned int   uint;
 typedef unsigned short ushort;
 typedef unsigned char  uchar;
