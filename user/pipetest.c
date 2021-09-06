@@ -7,8 +7,8 @@
 #include "kernel/types.h"
 #include "user/user.h"
 
-#define BUFSIZE 128
-#define DATASIZE 10485760
+#define BUFSIZE 256     // 512 byte buffer
+#define DATASIZE 10485760 // 10 MB
 
 // from FreeBSD.
 int
@@ -67,6 +67,7 @@ int main(void) {
         exit(-1);
     }
     else if (pid == 0) {
+        printf("clidpid: %d\n", getpid());
         close(p[0]);
         
         for (int n = 0; n < nsend; n++) {
