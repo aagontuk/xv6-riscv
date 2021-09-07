@@ -167,3 +167,59 @@ memcpy64(void *dst, const void *src, uint n)
 
   return dst; 
 }
+
+void *
+memcpy64_aln(void *dst, const void *src, uint n) {
+  typedef uint64 __attribute__((__may_alias__)) u64;
+  u64 *d = dst;
+  const u64 *s = src;
+
+
+  /* nothing to do here */
+  if(n == 0 || dst == src)
+    return dst;
+
+  if((u64)dst % 8 == 0 && (u64)src % 8 == 0) {
+    while(n >= 8) {
+      *d++ = *s++; 
+      n-=8;
+    }
+  }
+
+  char *cd = dst;
+  const char *cs = src;
+
+  while(n--) {
+    *cd++ = *cs++; 
+  }
+
+  return dst;
+}
+
+void *
+memcpy64_aln_bit(void *dst, const void *src, uint n) {
+  typedef uint64 __attribute__((__may_alias__)) u64;
+  u64 *d = dst;
+  const u64 *s = src;
+
+
+  /* nothing to do here */
+  if(n == 0 || dst == src)
+    return dst;
+  
+  if((((u64)dst & 0x7) == 0) && (((u64)src & 0x7) == 0)) {
+    while(n >= 8) {
+      *d++ = *s++; 
+      n-=8;
+    }
+  }
+
+  char *cd = dst;
+  const char *cs = src;
+
+  while(n--) {
+    *cd++ = *cs++; 
+  }
+
+  return dst;
+}

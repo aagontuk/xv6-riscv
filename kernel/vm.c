@@ -337,6 +337,36 @@ uvmclear(pagetable_t pagetable, uint64 va)
   *pte &= ~PTE_U;
 }
 
+void *
+memcpy64(void *dst, const void *src, uint n)
+{
+  typedef uint64 __attribute__((__may_alias__)) u64;
+  u64 *d = dst;
+  const u64 *s = src;
+
+
+  /* nothing to do here */
+  if(n == 0 || dst == src)
+    return dst;
+  
+  if((u64)dst % 8 == 0 && (u64)src % 8 == 0) {
+    while(n >= 8) {
+      *d++ = *s++; 
+      n-=8;
+    }
+  }
+  
+
+  char *cd = dst;
+  const char *cs = src;
+
+  while(n--) {
+    *cd++ = *cs++; 
+  }
+
+  return dst; 
+}
+
 // Copy from kernel to user.
 // Copy len bytes from src to virtual address dstva in a given page table.
 // Return 0 on success, -1 on error.

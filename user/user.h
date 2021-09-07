@@ -41,3 +41,5 @@ int atoi(const char*);
 int memcmp(const void *, const void *, uint);
 void *memcpy(void *, const void *, uint);
 void *memcpy64(void *, const void *, uint);
+void *memcpy64_aln(void *, const void *, uint);
+void *memcpy64_aln_bit(void *, const void *, uint);
