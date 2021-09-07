@@ -353,7 +353,8 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
     n = PGSIZE - (dstva - va0);
     if(n > len)
       n = len;
-    memmove((void *)(pa0 + (dstva - va0)), src, n);
+    /*memmove((void *)(pa0 + (dstva - va0)), src, n);*/
+    memcpy64((void *)(pa0 + (dstva - va0)), src, n);
 
     len -= n;
     src += n;
@@ -378,7 +379,8 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
     n = PGSIZE - (srcva - va0);
     if(n > len)
       n = len;
-    memmove(dst, (void *)(pa0 + (srcva - va0)), n);
+    /*memmove(dst, (void *)(pa0 + (srcva - va0)), n);*/
+    memcpy64(dst, (void *)(pa0 + (srcva - va0)), n);
 
     len -= n;
     dst += n;

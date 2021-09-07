@@ -134,3 +134,36 @@ memcpy(void *dst, const void *src, uint n)
 {
   return memmove(dst, src, n);
 }
+
+void *
+memcpy64(void *dst, const void *src, uint n)
+{
+  char *d = dst;
+  const char *s = src;
+
+  typedef uint64 __attribute__((__may_alias__)) u64;
+
+  /* nothing to do here */
+  if(n == 0 || dst == src)
+    return dst;
+
+  /* slow copy until multiple of 8 */
+  if(n % 8 != 0) {
+    uint r = n % 8; 
+    int i = 0;
+    while(i < r) {
+      *d++ = *s++; 
+      n--;
+      i++;
+    }
+  }
+
+  while(n >= 8) {
+    *(u64 *)(d) = *(u64 *)(s);
+    d+=8;
+    s+=8;
+    n-=8;
+  }
+
+  return dst; 
+}

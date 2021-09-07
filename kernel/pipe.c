@@ -102,7 +102,8 @@ pipewrite(struct pipe *pi, uint64 addr, int n)
       char data[PIPESIZE];
       if(copyin(pr->pagetable, data, addr + i, wsize) == -1)
         break;
-      memmove(pi->data + (pi->nwrite % PIPESIZE), data, wsize);
+      /*memmove(pi->data + (pi->nwrite % PIPESIZE), data, wsize);*/
+      memcpy64(pi->data + (pi->nwrite % PIPESIZE), data, wsize);
       pi->nwrite += wsize;
       i += wsize;
     }
@@ -141,7 +142,8 @@ piperead(struct pipe *pi, uint64 addr, int n)
       rsize = pi->nwrite % PIPESIZE;
 
     char rbuff[PIPESIZE];
-    memmove(rbuff, pi->data + (pi->nread % PIPESIZE), rsize);
+    /*memmove(rbuff, pi->data + (pi->nread % PIPESIZE), rsize);*/
+    memcpy64(rbuff, pi->data + (pi->nread % PIPESIZE), rsize);
     pi->nread += rsize;
     if(copyout(pr->pagetable, addr + i, rbuff, rsize) == -1)
       break;

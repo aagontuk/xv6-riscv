@@ -124,6 +124,7 @@ int             holdingsleep(struct sleeplock*);
 void            initsleeplock(struct sleeplock*, char*);
 
 // string.c
+void*           memcpy64(void*, const void*, uint);
 int             memcmp(const void*, const void*, uint);
 void*           memmove(void*, const void*, uint);
 void*           memset(void*, int, uint);
