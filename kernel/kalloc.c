@@ -12,6 +12,7 @@
 void freerange(void *pa_start, void *pa_end);
 
 extern char end[]; // first address after kernel.
+                   // free memory
                    // defined by kernel.ld.
 
 struct run {

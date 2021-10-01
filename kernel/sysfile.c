@@ -454,6 +454,28 @@ sys_exec(void)
   return -1;
 }
 
+uint64 sys_ringbuf(void) {
+    char ringname[MAX_RING_NAME];
+    int type;
+    uint64 buf;
+
+    if (argstr(0, ringname, MAX_RING_NAME) < 0) {
+        return -1; 
+    }
+    
+    if (argint(1, &type) < 0) {
+        return -1; 
+    }
+    
+    if (argaddr(2, &buf) < 0) {
+        return -1; 
+    }
+
+    create_ringbuf(ringname, type, buf);
+
+    return 0;    
+}
+
 uint64
 sys_pipe(void)
 {

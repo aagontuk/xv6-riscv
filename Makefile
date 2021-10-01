@@ -13,6 +13,7 @@ OBJS = \
   $K/main.o \
   $K/vm.o \
   $K/proc.o \
+  $K/ringbuf.o \
   $K/swtch.o \
   $K/trampoline.o \
   $K/trap.o \
@@ -135,6 +136,7 @@ UPROGS=\
 	$U/_pipetest\
 	$U/_uptimetest\
 	$U/_memtest\
+	$U/_ringbuftest
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
