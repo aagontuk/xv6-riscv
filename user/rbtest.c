@@ -65,8 +65,12 @@ int main(void) {
     
         ringbuf("ring", 0, (uint64)&addr);
         rbread(addr);
+        ringbuf("ring", 1, (uint64)&addr);
+    }
+    else {
+        wait((int *)0);
+        ringbuf("ring", 1, (uint64)&addr);
     }
     
-    wait((int *)0);
     exit(0);
 }

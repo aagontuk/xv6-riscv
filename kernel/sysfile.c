@@ -455,9 +455,9 @@ sys_exec(void)
 }
 
 uint64 sys_ringbuf(void) {
-    char ringname[MAX_RING_NAME];
-    int type;
-    uint64 buf;
+    char ringname[MAX_RING_NAME]; // ring name
+    int type;  // system call type: 1 open or 0 close
+    uint64 buf; // user supplied pointer to hold the address of the ringbuf
     uint64 addr;
     struct proc *p = myproc();
 

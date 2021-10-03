@@ -73,9 +73,31 @@ struct ringbuf *allocate_ring(char *name) {
 
 int create_ringbuf(char *name, int type, uint64 *addr) {
     struct ringbuf *rb;
+    struct proc *p = myproc();
     void **pg;
     uint64 a = MAP_START;
     int nmap = 2;
+
+    // clean up on close
+    // unpam phy pages if refcount zero, remove VAs, decrement refcount
+    // TODO: Bookkepping page
+    if (type) {
+        rb = find_ring(name);
+        rb->refcount--;
+
+        acquire(&p->lock);
+        if (!rb->refcount) {
+            uvmunmap(p->pagetable, MAP_START, (RINGBUF_SIZE * 2), 1); 
+            // temp hack for bookkepping page
+            kfree(rb->book); 
+        }
+        else {
+            uvmunmap(p->pagetable, MAP_START, (RINGBUF_SIZE * 2), 0); 
+        }
+        release(&p->lock);
+
+        return 0;
+    }
 
     // already exists
     // increment and map pages to calling processes address space
@@ -92,8 +114,7 @@ int create_ringbuf(char *name, int type, uint64 *addr) {
     }
 
     // map pages into process's address space
-    struct proc *p = myproc();
-
+    // TODO: Bookkepping page
     acquire(&p->lock);
     while (nmap--) {
         for (pg = rb->pages; pg < &rb->pages[RINGBUF_SIZE]; pg++) {
