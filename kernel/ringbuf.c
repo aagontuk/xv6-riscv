@@ -84,7 +84,6 @@ int create_ringbuf(char *name, int type, uint64 *addr) {
 
     // map pages into process's address space
     struct proc *p = myproc();
-    printf("pid: %d\n", p->pid);
 
     acquire(&p->lock);
     while (nmap--) {
@@ -101,8 +100,6 @@ int create_ringbuf(char *name, int type, uint64 *addr) {
     }
     release(&p->lock);
     *addr = MAP_START;
-
-    printf("New ring buffer created!\n");
 
     return 0;
 }

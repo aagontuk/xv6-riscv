@@ -473,15 +473,30 @@ uint64 sys_ringbuf(void) {
         return -1; 
     }
 
-    printf("Params: %s:%d\n", ringname,buf);
     create_ringbuf(ringname, type, &addr);
-    printf("addr: %d\n", addr);
     if (copyout(p->pagetable, buf, (char *)&addr, sizeof(addr)) < 0) {
         printf("Can't copy from k to u\n");
     }
-    printf("Params: %s:%d\n", ringname,buf);
 
     return 0;    
+}
+
+uint64 sys_test(void) {
+    uint64 arg;
+    int x = 100;
+    struct proc *p = myproc();
+
+    if (argaddr(0, &arg) < 0) {
+        return -1; 
+    }
+
+    printf("arg: %d\n", arg);
+    if (copyout(p->pagetable, arg, (char *)&x, sizeof(x)) < 0) {
+        printf("k -> u failed\n"); 
+    }
+    printf("arg: %d\n", arg);
+    
+    return 0;
 }
 
 uint64

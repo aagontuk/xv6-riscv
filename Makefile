@@ -136,7 +136,7 @@ UPROGS=\
 	$U/_pipetest\
 	$U/_uptimetest\
 	$U/_memtest\
-	$U/_ringbuftest
+	$U/_rbtest\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)

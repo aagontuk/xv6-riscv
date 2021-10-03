@@ -6,7 +6,7 @@ int fork(void);
 int exit(int) __attribute__((noreturn));
 int wait(int*);
 int pipe(int*);
-int ringbuf(char *, int, char *);
+int ringbuf(char *, int, uint64);
 int write(int, const void*, int);
 int read(int, void*, int);
 int close(int);
@@ -24,6 +24,7 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+int test(void *);
 
 // ulib.c
 int stat(const char*, struct stat*);
