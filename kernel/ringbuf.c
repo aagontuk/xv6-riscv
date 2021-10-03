@@ -16,6 +16,11 @@ struct ringbuf {
     void *book;
 };
 
+struct book {
+    int is_read;
+    int is_write;
+};
+
 
 struct spinlock ringbuf_lock; // Will use it later
 struct ringbuf ringbufs[MAX_RINGBUFS];
@@ -75,12 +80,16 @@ int create_ringbuf(char *name, int type, uint64 *addr) {
     // already exists
     // increment and map pages to calling processes address space
     if ((rb = find_ring(name))) {
-        printf("Already exists!\n");
-        return -1;
-    }
+        if (rb->refcount > 1) {
+            return -1; 
+        }
 
+        rb->refcount++;
+    }
     // allocate new ringbuf
-    rb = allocate_ring(name);
+    else {
+        rb = allocate_ring(name);
+    }
 
     // map pages into process's address space
     struct proc *p = myproc();

@@ -43,12 +43,30 @@ void int_test(uint64 addr) {
     printf("addr: %p\tval:%d\n", v, *v);
 }
 
+void rbwrite(uint64 addr) {
+    strcpy((char *)addr, "UTAH");
+}
+
+void rbread(uint64 addr) {
+    printf("%s\n", (char *)addr);
+}
+
 int main(void) {
     uint64 addr;
+    int pid;
 
+    printf("Parent writing...\n");
     ringbuf("ring", 0, (uint64)&addr);
-    str_test(addr);
-    int_test(addr);
+    rbwrite(addr);
+
+    pid = fork();
+    if(!pid) {
+        printf("Child reading...\n");
     
+        ringbuf("ring", 0, (uint64)&addr);
+        rbread(addr);
+    }
+    
+    wait((int *)0);
     exit(0);
 }
