@@ -12,7 +12,7 @@
 struct ringbuf {
     int refcount;
     char name[MAX_RING_NAME];
-    void *buf[RINGBUF_SIZE];
+    void *pages[RINGBUF_SIZE];
     void *book;
 };
 
@@ -20,68 +20,89 @@ struct ringbuf {
 struct spinlock ringbuf_lock; // Will use it later
 struct ringbuf ringbufs[MAX_RINGBUFS];
 
-int strcmp(const char *, const char *);
-char *strcpy(char *, const char *);
+// Check if the ring buffer already exists.
+// If exists return the ring buffer
+// otherwise return 0
+struct ringbuf *find_ring(char *name) {
+    struct ringbuf *rb;
 
-int create_ringbuf(char *name, int type, uint64 addr) {
-    struct ringbuf new_ring;
-
-    // already exists in the pool
-    for (int i = 0; i < MAX_RINGBUFS; i++) {
-        if (!strcmp(ringbufs[i].name, name)) {
-            ringbufs[i].refcount++; 
-            printf("Already exists: %d\n", ringbufs[i].refcount);
-            return -1;
+    for (rb = ringbufs; rb < &ringbufs[MAX_RINGBUFS]; rb++) {
+        if (!strncmp(rb->name, name, strlen(name))) {
+            return rb;
         }   
     }
 
-    // create a new one
-    strcpy(new_ring.name, name);
-    new_ring.refcount = 1;
+    return 0;
+}
 
-    // allocate physical pages
-    for (int i = 0; i <= RINGBUF_SIZE; i++) {
-        if (i != RINGBUF_SIZE)
-            new_ring.buf[i] = kalloc(); 
-        else
-            new_ring.book = kalloc();
+
+// Find an empty ringbuf from the list
+// Allocate physical pages for the buffer
+// and bookkepping page.
+struct ringbuf *allocate_ring(char *name) {
+    struct ringbuf *rb;
+    void **p;
+
+    for (rb = ringbufs; rb < &ringbufs[MAX_RINGBUFS]; rb++) {
+        if (!rb->refcount) {
+            // copy name
+            strncpy(rb->name, name, strlen(name));
+
+            // allocate physical pages
+            for (p = rb->pages; p < &rb->pages[RINGBUF_SIZE]; p++) {
+                *p = kalloc(); 
+            }
+
+            // allocate bookkepping page
+            rb->book = kalloc();
+
+            // increment count
+            rb->refcount = 1;
+
+            return rb;
+        }
     }
+
+    return 0;
+}
+
+int create_ringbuf(char *name, int type, uint64 *addr) {
+    struct ringbuf *rb;
+    void **pg;
+    uint64 a = MAP_START;
+    int nmap = 2;
+
+    // already exists
+    // increment and map pages to calling processes address space
+    if ((rb = find_ring(name))) {
+        printf("Already exists!\n");
+        return -1;
+    }
+
+    // allocate new ringbuf
+    rb = allocate_ring(name);
 
     // map pages into process's address space
     struct proc *p = myproc();
     printf("pid: %d\n", p->pid);
 
     acquire(&p->lock);
-    if (mappages(p->pagetable, PGSIZE * 1000, PGSIZE, (uint64)new_ring.buf[0], PTE_U | PTE_R | PTE_W | PTE_X) < 0) {
-        printf("mappage() failed\n");
-        release(&p->lock);
-        return -1;
+    while (nmap--) {
+        for (pg = rb->pages; pg < &rb->pages[RINGBUF_SIZE]; pg++) {
+            if (mappages(p->pagetable, a,
+                PGSIZE, (uint64)(*pg), PTE_U | PTE_R | PTE_W) < 0) {
+                
+                printf("mappage() failed\n");
+                release(&p->lock);
+                return -1;
+            }
+            a += PGSIZE;
+        }
     }
     release(&p->lock);
-
-    // find place in the pool
-    ringbufs[0] = new_ring;
+    *addr = MAP_START;
 
     printf("New ring buffer created!\n");
 
     return 0;
-}
-
-int
-strcmp(const char *p, const char *q)
-{
-  while(*p && *p == *q)
-    p++, q++;
-  return (uchar)*p - (uchar)*q;
-}
-
-char*
-strcpy(char *s, const char *t)
-{
-  char *os;
-
-  os = s;
-  while((*s++ = *t++) != 0)
-    ;
-  return os;
 }

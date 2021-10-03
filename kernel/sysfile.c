@@ -458,6 +458,8 @@ uint64 sys_ringbuf(void) {
     char ringname[MAX_RING_NAME];
     int type;
     uint64 buf;
+    uint64 addr;
+    struct proc *p = myproc();
 
     if (argstr(0, ringname, MAX_RING_NAME) < 0) {
         return -1; 
@@ -471,7 +473,13 @@ uint64 sys_ringbuf(void) {
         return -1; 
     }
 
-    create_ringbuf(ringname, type, buf);
+    printf("Params: %s:%d\n", ringname,buf);
+    create_ringbuf(ringname, type, &addr);
+    printf("addr: %d\n", addr);
+    if (copyout(p->pagetable, buf, (char *)&addr, sizeof(addr)) < 0) {
+        printf("Can't copy from k to u\n");
+    }
+    printf("Params: %s:%d\n", ringname,buf);
 
     return 0;    
 }
