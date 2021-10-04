@@ -5,12 +5,15 @@
 int main(void) {
     int pid; 
     int pfd;
+    char **buf = 0;
+    int avail;
 
     printf("parent opening ring...\n");
     pfd = rb_open("ring");
     printf("fd: %d\n", pfd);
-    printf("writing to book...\n");
-    //bookw(pfd);    
+    
+    rb_write_start(pfd, buf, &avail);
+    printf("available %d from %p\n", avail, *buf);
 
     pid = fork();
 
@@ -19,8 +22,6 @@ int main(void) {
         printf("child opening ring..\n"); 
         cfd = rb_open("ring");
         printf("fd: %d\n", cfd);
-        printf("reading from book...\n");
-        bookr(pfd);    
         printf("child closing ring..\n"); 
         rb_close(cfd);
     }

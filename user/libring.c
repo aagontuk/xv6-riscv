@@ -3,6 +3,8 @@
 #include "kernel/param.h"
 #include "user.h"
 
+#define SIZE RINGBUF_SIZE * 4096
+
 struct uring {
     char name[MAX_RING_NAME];
     void *buf;
@@ -68,7 +70,12 @@ void bookw(int desc) {
 }
 
 void rb_write_start(int desc, char **addr, int *bytes) {
+    struct book *b = (struct book *)urings[desc].book;
 
+    // protect with atomic read
+    *bytes = (SIZE - (b->writep % SIZE)) + (b->readp % SIZE);
+
+    *addr = urings[desc].buf + (b->writep % SIZE);
 }
 
 void rb_write_finish(int desc, int bytes) {
