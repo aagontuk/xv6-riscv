@@ -71,21 +71,31 @@ void bookw(int desc) {
 
 void rb_write_start(int desc, char **addr, int *bytes) {
     struct book *b = (struct book *)urings[desc].book;
+    int writep = __atomic_load_8(&b->writep, __ATOMIC_SEQ_CST);
+    int readp = __atomic_load_8(&b->readp, __ATOMIC_SEQ_CST);
 
     // protect with atomic read
-    *bytes = (SIZE - (b->writep % SIZE)) + (b->readp % SIZE);
-
-    *addr = urings[desc].buf + (b->writep % SIZE);
+    *bytes = (SIZE - (writep % SIZE)) + (readp % SIZE);
+    *addr = urings[desc].buf + (writep % SIZE);
 }
 
 void rb_write_finish(int desc, int bytes) {
-
+    struct book *b = (struct book *)urings[desc].book;
+    int curw = __atomic_load_8(&b->writep, __ATOMIC_SEQ_CST);    
+    __atomic_store_8(&b->writep, curw + bytes, __ATOMIC_SEQ_CST);
 }
 
 void rb_read_start(int desc, char **addr, int *bytes) {
+    struct book *b = (struct book *)urings[desc].book;
+    int writep = __atomic_load_8(&b->writep, __ATOMIC_SEQ_CST);
+    int readp = __atomic_load_8(&b->readp, __ATOMIC_SEQ_CST);
 
+    *bytes = writep - readp;
+    *addr = urings[desc].buf + (readp % SIZE);
 }
 
 void rb_read_finish(int desc, int bytes) {
-
+    struct book *b = (struct book *)urings[desc].book;
+    int curr = __atomic_load_8(&b->readp, __ATOMIC_SEQ_CST);    
+    __atomic_store_8(&b->readp, curr + bytes, __ATOMIC_SEQ_CST);
 }
