@@ -9,6 +9,8 @@ int main(void) {
     printf("parent opening ring...\n");
     pfd = rb_open("ring");
     printf("fd: %d\n", pfd);
+    printf("writing to book...\n");
+    bookw(pfd);    
 
     pid = fork();
 
@@ -17,6 +19,8 @@ int main(void) {
         printf("child opening ring..\n"); 
         cfd = rb_open("ring");
         printf("fd: %d\n", cfd);
+        printf("reading from book...\n");
+        bookr(pfd);    
         printf("child closing ring..\n"); 
         rb_close(cfd);
     }

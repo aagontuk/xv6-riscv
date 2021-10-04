@@ -52,7 +52,6 @@ void rbread(void *addr) {
 }
 
 int main(void) {
-    //uint64 addr;
     void *addr;
     int pid;
 
