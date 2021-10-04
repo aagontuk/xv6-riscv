@@ -3,10 +3,28 @@
 #include "libring.h"
 
 int main(void) {
-   int fd = rb_open("ring");
-   printf("ring fd: %d\n", fd);
-   printf("closing...\n");
-   rb_close(fd);
+    int pid; 
+    int pfd;
 
-   exit(0);
+    printf("parent opening ring...\n");
+    pfd = rb_open("ring");
+    printf("fd: %d\n", pfd);
+
+    pid = fork();
+
+    if(pid == 0) {
+        int cfd;
+        printf("child opening ring..\n"); 
+        cfd = rb_open("ring");
+        printf("fd: %d\n", cfd);
+        printf("child closing ring..\n"); 
+        rb_close(cfd);
+    }
+    else {
+        wait((int *)0);
+        printf("parent closing ring..\n"); 
+        rb_close(pfd);
+    }
+
+    exit(0);
 }
