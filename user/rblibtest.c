@@ -10,7 +10,7 @@ int main(void) {
     pfd = rb_open("ring");
     printf("fd: %d\n", pfd);
     printf("writing to book...\n");
-    bookw(pfd);    
+    //bookw(pfd);    
 
     pid = fork();
 

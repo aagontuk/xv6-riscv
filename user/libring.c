@@ -10,17 +10,40 @@ struct uring {
     int exist;
 };
 
+struct book {
+    uint64 readp;
+    uint64 writep;
+};
+
 struct uring urings[NPROC];
 
+int find_ring(char *name) {
+    for (int i = 0; i < NPROC; i++) {
+        if (!strcmp(urings[i].name, name)) 
+            return i;
+    }
+
+    return -1;
+}
+
 int rb_open(char *name) {
+    struct book *b;
+
     for (int i = 0; i < NPROC; i++) {
         if (!urings[i].exist) {
-            strcpy(urings[i].name, name);
             urings[i].exist = 1;
             
             ringbuf(name, 0, (uint64)&urings[i].buf);
-
             urings[i].book = urings[i].buf + (4096 * (RINGBUF_SIZE * 2));
+            
+            // initialize bookkepping if called for the first time
+            if (find_ring(name) < 0) {
+                b = (struct book *)urings[i].book;
+                b->readp = 0;
+                b->writep = 0;
+            }
+            
+            strcpy(urings[i].name, name);
 
             return i;
         }
@@ -35,7 +58,8 @@ int rb_close(int desc) {
 }
 
 void bookr(int desc) {
-    printf("%s\n", (char *)urings[desc].book);
+    struct book *b = (struct book *)urings[desc].book;
+    printf("writep: %d\treadp: %d\n", b->writep, b->readp);
 }
 
 void bookw(int desc) {
