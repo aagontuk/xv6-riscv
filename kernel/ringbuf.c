@@ -5,8 +5,6 @@
 #include "defs.h"
 #include "proc.h"
 
-#define RINGBUF_SIZE 16
-#define MAX_RINGBUFS 10
 #define MAP_START 128*1024*1024
 
 struct ringbuf {
