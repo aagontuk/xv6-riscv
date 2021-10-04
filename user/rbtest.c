@@ -43,16 +43,17 @@ void int_test(uint64 addr) {
     printf("addr: %p\tval:%d\n", v, *v);
 }
 
-void rbwrite(uint64 addr) {
+void rbwrite(void *addr) {
     strcpy((char *)addr, "UTAH");
 }
 
-void rbread(uint64 addr) {
+void rbread(void *addr) {
     printf("%s\n", (char *)addr);
 }
 
 int main(void) {
-    uint64 addr;
+    //uint64 addr;
+    void *addr;
     int pid;
 
     printf("Parent writing...\n");
