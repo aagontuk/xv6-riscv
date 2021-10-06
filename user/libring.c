@@ -3,7 +3,7 @@
 #include "kernel/param.h"
 #include "user.h"
 
-#define SIZE RINGBUF_SIZE * 4096
+#define SIZE (RINGBUF_SIZE * 4096)
 
 struct uring {
     char name[MAX_RING_NAME];
@@ -69,12 +69,16 @@ void bookw(int desc) {
     strcpy(str, "riscv");
 }
 
-void rb_write_start(int desc, char **addr, int *bytes) {
+void rb_write_start(int desc, void **addr, int *bytes) {
     struct book *b = (struct book *)urings[desc].book;
     int writep = __atomic_load_8(&b->writep, __ATOMIC_SEQ_CST);
     int readp = __atomic_load_8(&b->readp, __ATOMIC_SEQ_CST);
 
-    // protect with atomic read
+    /*printf("rb_write_start(): writep %d\treadp %d\n", writep, readp);*/
+    /*printf("rb_write_start(): SIZE = %d\n", SIZE);*/
+    /*printf("rb_write_start(): writep %% SIZE = %d\n", writep % SIZE);*/
+    /*printf("rb_write_start(): readp %% SIZE = %d\n", readp % SIZE);*/
+    /*printf("rb_write_start(): available %d\n\n", (SIZE - (writep % SIZE) + (readp % SIZE)));*/
     *bytes = (SIZE - (writep % SIZE)) + (readp % SIZE);
     *addr = urings[desc].buf + (writep % SIZE);
 }
@@ -82,10 +86,12 @@ void rb_write_start(int desc, char **addr, int *bytes) {
 void rb_write_finish(int desc, int bytes) {
     struct book *b = (struct book *)urings[desc].book;
     int curw = __atomic_load_8(&b->writep, __ATOMIC_SEQ_CST);    
+    //printf("rb_write_finish(): current write pointer: %d\n", curw);
     __atomic_store_8(&b->writep, curw + bytes, __ATOMIC_SEQ_CST);
+    //printf("rb_write_finish(): updated write pointer: %d\n", __atomic_load_8(&b->writep, __ATOMIC_SEQ_CST));
 }
 
-void rb_read_start(int desc, char **addr, int *bytes) {
+void rb_read_start(int desc, void **addr, int *bytes) {
     struct book *b = (struct book *)urings[desc].book;
     int writep = __atomic_load_8(&b->writep, __ATOMIC_SEQ_CST);
     int readp = __atomic_load_8(&b->readp, __ATOMIC_SEQ_CST);

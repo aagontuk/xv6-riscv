@@ -5,7 +5,7 @@
 #include "defs.h"
 #include "proc.h"
 
-#define MAP_START 128*1024*1024
+#define MAP_START (128*1024*1024)
 
 struct ringbuf {
     int refcount;
@@ -76,9 +76,6 @@ int create_ringbuf(char *name, int type, uint64 *addr) {
     uint64 a = MAP_START;
     int nmap = 2;
 
-    // clean up on close
-    // unpam phy pages if refcount zero, remove VAs, decrement refcount
-    // TODO: Bookkepping page
     if (type) {
         rb = find_ring(name);
         rb->refcount--;
@@ -109,8 +106,6 @@ int create_ringbuf(char *name, int type, uint64 *addr) {
         rb = allocate_ring(name);
     }
 
-    // map pages into process's address space
-    // TODO: Bookkepping page
     acquire(&p->lock);
     while (nmap--) {
         for (pg = rb->pages; pg < &rb->pages[RINGBUF_SIZE]; pg++) {
