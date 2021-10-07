@@ -17,25 +17,50 @@ struct book {
     uint64 writep;
 };
 
+int init_uring = 1;
 struct uring urings[NPROC];
 
+// initialize all uring.exists to zero
+void init_urings(void) {
+    for (int i = 0; i < NPROC; i++) {
+        urings[i].exist = 0; 
+    }
+}
+
+// find a ring by name
 int find_ring(char *name) {
     for (int i = 0; i < NPROC; i++) {
-        if (!strcmp(urings[i].name, name)) 
+        
+        if (urings[i].exist != 0 &&
+              strcmp(urings[i].name, name) == 0) {
+            
             return i;
+
+       }
     }
 
     return -1;
 }
 
+// open a ring buffer
+// return the discriptor of the buffer
 int rb_open(char *name) {
     struct book *b;
 
+    // Initialize all exists to zero
+    if (init_uring) {
+        init_urings(); 
+        init_uring = 1;
+    }
+
     for (int i = 0; i < NPROC; i++) {
+        
         if (!urings[i].exist) {
             urings[i].exist = 1;
             
+            // create a new ring buffer
             ringbuf(name, 0, (uint64)&urings[i].buf);
+            
             urings[i].book = urings[i].buf + (4096 * (RINGBUF_SIZE * 2));
             
             // initialize bookkepping if called for the first time
@@ -54,41 +79,42 @@ int rb_open(char *name) {
     return -1;
 }
 
+// close ring
 int rb_close(int desc) {
+    int ret = ringbuf(urings[desc].name, 1, (uint64)&urings[desc].buf);
+    
     urings[desc].exist = 0;
-    return ringbuf(urings[desc].name, 1, (uint64)&urings[desc].buf);
-}
+    strcpy(urings[desc].name, "");
 
-void bookr(int desc) {
-    struct book *b = (struct book *)urings[desc].book;
-    printf("writep: %d\treadp: %d\n", b->writep, b->readp);
-}
-
-void bookw(int desc) {
-    char *str = (char *)urings[desc].book;
-    strcpy(str, "riscv");
+    return ret;
 }
 
 void rb_write_start(int desc, void **addr, int *bytes) {
     struct book *b = (struct book *)urings[desc].book;
+    
     int writep = __atomic_load_8(&b->writep, __ATOMIC_SEQ_CST);
     int readp = __atomic_load_8(&b->readp, __ATOMIC_SEQ_CST);
+    int wavail;
 
-    /*printf("rb_write_start(): writep %d\treadp %d\n", writep, readp);*/
-    /*printf("rb_write_start(): SIZE = %d\n", SIZE);*/
-    /*printf("rb_write_start(): writep %% SIZE = %d\n", writep % SIZE);*/
-    /*printf("rb_write_start(): readp %% SIZE = %d\n", readp % SIZE);*/
-    /*printf("rb_write_start(): available %d\n\n", (SIZE - (writep % SIZE) + (readp % SIZE)));*/
-    *bytes = (SIZE - (writep % SIZE)) + (readp % SIZE);
+    // end of buffer
+    if (writep != 0 && writep % SIZE == 0) {
+        wavail = SIZE;    
+    }
+    // in the middle of buffer
+    else {
+        wavail = writep % SIZE; 
+    }
+
+    printf("writep -> %d\treadp -> %d\n", writep, readp);
+    *bytes = ((SIZE - wavail) + (readp % SIZE));
     *addr = urings[desc].buf + (writep % SIZE);
 }
 
 void rb_write_finish(int desc, int bytes) {
     struct book *b = (struct book *)urings[desc].book;
     int curw = __atomic_load_8(&b->writep, __ATOMIC_SEQ_CST);    
-    //printf("rb_write_finish(): current write pointer: %d\n", curw);
+    
     __atomic_store_8(&b->writep, curw + bytes, __ATOMIC_SEQ_CST);
-    //printf("rb_write_finish(): updated write pointer: %d\n", __atomic_load_8(&b->writep, __ATOMIC_SEQ_CST));
 }
 
 void rb_read_start(int desc, void **addr, int *bytes) {
@@ -103,5 +129,6 @@ void rb_read_start(int desc, void **addr, int *bytes) {
 void rb_read_finish(int desc, int bytes) {
     struct book *b = (struct book *)urings[desc].book;
     int curr = __atomic_load_8(&b->readp, __ATOMIC_SEQ_CST);    
+    
     __atomic_store_8(&b->readp, curr + bytes, __ATOMIC_SEQ_CST);
 }

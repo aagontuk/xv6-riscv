@@ -5,7 +5,8 @@
 #include "defs.h"
 #include "proc.h"
 
-#define MAP_START (128*1024*1024)
+// MAXVA - 1GB
+#define MAP_START (MAXVA - (1024*1024*1024))
 
 struct ringbuf {
     int refcount;
@@ -14,16 +15,19 @@ struct ringbuf {
     void *book;
 };
 
-struct book {
-    int is_read;
-    int is_write;
-};
-
 
 struct spinlock ringbuf_lock; // Will use it later
+int init_ring = 1;
 struct ringbuf ringbufs[MAX_RINGBUFS];
 
-// Check if the ring buffer already exists.
+// initialize all refcount to zero
+void init_ringbuf(void) {
+   for (int i = 0; i < MAX_RINGBUFS; i++) {
+       ringbufs[i].refcount = 0; 
+   }
+}
+
+// check if the ring buffer already exists.
 // If exists return the ring buffer
 // otherwise return 0
 struct ringbuf *find_ring(char *name) {
@@ -60,7 +64,7 @@ struct ringbuf *allocate_ring(char *name) {
             rb->book = kalloc();
 
             // increment count
-            rb->refcount = 1;
+            rb->refcount++;
 
             return rb;
         }
@@ -69,12 +73,19 @@ struct ringbuf *allocate_ring(char *name) {
     return 0;
 }
 
+// create/destroy a ring buffer
+// type: 0 -> create, 1 -> destroy
 int create_ringbuf(char *name, int type, uint64 *addr) {
     struct ringbuf *rb;
     struct proc *p = myproc();
     void **pg;
     uint64 a = MAP_START;
-    int nmap = 2;
+    int nmap = 2; // map each phy pages 2 times
+
+    if (init_ring) {
+        init_ringbuf();
+        init_ring = 0;
+    }
 
     if (type) {
         rb = find_ring(name);
@@ -82,9 +93,11 @@ int create_ringbuf(char *name, int type, uint64 *addr) {
 
         acquire(&p->lock);
         if (!rb->refcount) {
+            // ref = 0, remove from calling process and free phy pages
             uvmunmap(p->pagetable, MAP_START, (RINGBUF_SIZE * 2) + 1, 1); 
         }
         else {
+            // only remove from calling process
             uvmunmap(p->pagetable, MAP_START, (RINGBUF_SIZE * 2) + 1, 0); 
         }
         release(&p->lock);
@@ -112,7 +125,6 @@ int create_ringbuf(char *name, int type, uint64 *addr) {
             if (mappages(p->pagetable, a,
                 PGSIZE, (uint64)(*pg), PTE_U | PTE_R | PTE_W) < 0) {
                 
-                printf("mappage() failed\n");
                 release(&p->lock);
                 return -1;
             }

@@ -2,9 +2,9 @@
 #include "user.h"
 #include "libring.h"
 
-#define DATASIZE (4096*64)
+#define DATASIZE (4096*1024)
 #define NINT (DATASIZE/4)
-#define WCHUNK (4096*8)
+#define WCHUNK (4096)
 
 // from FreeBSD.
 int
@@ -43,11 +43,6 @@ rand(void)
 
 int main(void) {
     int pid;
-    int fd;
-    
-    printf("parent: opening ring...\n");
-    fd = rb_open("ring");
-    printf("parent: fd -> %d\n", fd);
     
     pid = fork();
 
@@ -57,23 +52,26 @@ int main(void) {
         int nread = 0;
         void *rstart = 0;
         int *cptr;
+        int missmatch = 0;
+        int match = 0;
 
-        //printf("child: opening ring...\n");
+        // open reader
         cfd = rb_open("ring");
-        //printf("child: fd -> %d\n", cfd);
         
+        // poll until all the data read
         while (nread < DATASIZE) {
+            // check if available to read
             rb_read_start(cfd, &rstart, &cavailable);
-            //printf("child: %d bytes available at %p\n", cavailable, rstart);
             cptr = (int *)rstart;
             
+            // if available read
             if (cavailable) {
                 for (int i = 0; i < (cavailable / 4); i++) {
                     if (cptr[i] != rand()) {
-                        printf("child: missmatch!\n"); 
+                        missmatch++;
                     }
                     else {
-                        //printf("child: match!\n"); 
+                        match++;
                     }
                 }
                 rb_read_finish(cfd, cavailable);
@@ -81,7 +79,9 @@ int main(void) {
             }
         }
 
-        printf("child: closing ring...\n");
+        printf("%d match\t%d missmatch\n", match, missmatch);
+
+        // close reader
         rb_close(cfd);
     }
     else {
@@ -91,13 +91,21 @@ int main(void) {
         void *wstart = 0;
         int *pptr;
 
+        int fd;
+        
+        // open writer
+        fd = rb_open("ring");
 
         while (nwrite < DATASIZE) {
+            // check if space available to write
             rb_write_start(fd, &wstart, &available);
+            
             pptr = (int *)wstart;
             wchunk = WCHUNK;
             
+            // if available write
             if (available) {
+                // how many left to write
                 if ((DATASIZE - nwrite) < wchunk) {
                     wchunk = (DATASIZE - nwrite); 
                 }
@@ -111,9 +119,10 @@ int main(void) {
             }
         }
         
+        // wait for reader to finish
         wait((int *)0);
-        printf("parent: wrote %d bytes\n", nwrite);
-        printf("parent: closing ring...\n");
+
+        // close the writing process
         rb_close(fd);
     }
 
