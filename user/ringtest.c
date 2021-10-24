@@ -43,6 +43,10 @@ rand(void)
 
 int main(void) {
     int pid;
+    int fd;
+        
+    // open writer
+    fd = rb_open("ring");
     
     pid = fork();
 
@@ -90,11 +94,6 @@ int main(void) {
         int wchunk;
         void *wstart = 0;
         int *pptr;
-
-        int fd;
-        
-        // open writer
-        fd = rb_open("ring");
 
         while (nwrite < DATASIZE) {
             // check if space available to write

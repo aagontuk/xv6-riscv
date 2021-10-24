@@ -17,15 +17,7 @@ struct book {
     uint64 writep;
 };
 
-int init_uring = 1;
 struct uring urings[NPROC];
-
-// initialize all uring.exists to zero
-void init_urings(void) {
-    for (int i = 0; i < NPROC; i++) {
-        urings[i].exist = 0; 
-    }
-}
 
 // find a ring by name
 int find_ring(char *name) {
@@ -46,12 +38,6 @@ int find_ring(char *name) {
 // return the discriptor of the buffer
 int rb_open(char *name) {
     struct book *b;
-
-    // Initialize all exists to zero
-    if (init_uring) {
-        init_urings(); 
-        init_uring = 1;
-    }
 
     for (int i = 0; i < NPROC; i++) {
         
@@ -105,7 +91,6 @@ void rb_write_start(int desc, void **addr, int *bytes) {
         wavail = writep % SIZE; 
     }
 
-    printf("writep -> %d\treadp -> %d\n", writep, readp);
     *bytes = ((SIZE - wavail) + (readp % SIZE));
     *addr = urings[desc].buf + (writep % SIZE);
 }

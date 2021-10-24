@@ -1,5 +1,9 @@
 #include "kernel/types.h"
 #include "user/user.h"
+#include "user/libring.h"
+
+#define DATASIZE (4096*32)
+#define CHUNKSIZE 1024
 
 void str_test(uint64 addr) {
     char *s = (char *)addr;
@@ -52,24 +56,97 @@ void rbread(void *addr) {
 }
 
 int main(void) {
-    void *addr;
-    int pid;
-
-    printf("Parent writing...\n");
-    ringbuf("ring", 0, (uint64)&addr);
-    rbwrite(addr);
+    //void *addr;
+    //int ret;
+    int parent_fd;
+    int pid; 
+    int child_open_failed = 0;
+    int child_close_failed = 0;
+    
+    if ((parent_fd = rb_open("ring")) < 0) {
+        printf("Failed opening parent!\n"); 
+    }
 
     pid = fork();
-    if(!pid) {
-        printf("Child reading...\n");
     
-        ringbuf("ring", 0, (uint64)&addr);
-        rbread(addr);
-        ringbuf("ring", 1, (uint64)&addr);
+    if (pid == 0) {
+        int child_fd;
+        int written = 0;
+        int write_size = 0;
+        int available;
+        int j = 0;
+        void *data;
+
+        if ((child_fd = rb_open("ring")) < 0) {
+            child_open_failed = 1;
+        }
+
+        while (written < DATASIZE) {
+            rb_write_start(child_fd, &data, &available);
+            int *iptr = (int *)data;
+            if (available) {
+               if (available > CHUNKSIZE) {
+                   write_size = CHUNKSIZE;
+               }
+               else {
+                   write_size = available; 
+               }
+
+               for (int i = 0; i < (write_size / 4); i++) {
+                   *(iptr + i) = j++;
+               }
+               
+               rb_write_finish(child_fd, write_size);
+               written += write_size;
+            }
+        }
+        
+        if ((rb_close(child_fd)) < -1) {
+            child_close_failed = 1;
+        }
     }
     else {
+        void *data;
+        int available;
+        int read = 0;
+        int j = 0;
+        int match = 0;
+        int missmatch = 0;
+
+        while (read < DATASIZE) {
+            rb_read_start(parent_fd, &data, &available);
+            int *iptr = (int *)data;
+            if (available) {
+                for (int i = 0; i < (available / 4); i++) {
+                    if (*(iptr + i) != j++) {
+                        missmatch++;
+                        printf("data missmatch! %d\n", j);
+                    }
+                    else {
+                        match++;
+                        //printf("data match! %d\n", match);
+                    }
+                } 
+                rb_read_finish(parent_fd, available);
+                read += available;
+            }
+        }
+
         wait((int *)0);
-        ringbuf("ring", 1, (uint64)&addr);
+
+        printf("%d match and %d missmatch!\n", match, missmatch);
+        
+        if ((rb_close(parent_fd)) < -1) {
+            printf("Failed closing parent!\n"); 
+        }
+
+        if (child_open_failed) {
+            printf("failed opening child!\n");
+        }
+
+        if (child_close_failed) {
+            printf("failed closing child!\n");
+        }
     }
     
     exit(0);

@@ -473,9 +473,13 @@ uint64 sys_ringbuf(void) {
         return -1; 
     }
 
-    create_ringbuf(ringname, type, &addr);
+    if (create_ringbuf(ringname, type, &addr) < 0) {
+        return -1; 
+    }
+    
     if (copyout(p->pagetable, buf, (char *)&addr, sizeof(addr)) < 0) {
         printf("Can't copy from k to u\n");
+        return -1;
     }
 
     return 0;    
