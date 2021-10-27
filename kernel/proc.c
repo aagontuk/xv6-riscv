@@ -26,6 +26,50 @@ extern char trampoline[]; // trampoline.S
 // must be acquired before any p->lock.
 struct spinlock wait_lock;
 
+// lock for the shared ready queue
+struct spinlock readyq_lock;
+
+// head and tail of the queue
+struct proc *head = 0;
+struct proc *tail = 0;
+
+void push_readyq(struct proc *p) {
+    acquire(&readyq_lock);
+    // first process in the ready queue
+    if (head == 0) {
+        head = tail = p; 
+    }
+    else {
+        tail->next = p; 
+        tail = p;
+    }
+    release(&readyq_lock);
+}
+
+struct proc *pop_readyq(void) {
+    acquire(&readyq_lock);
+
+    if (head == 0) {
+        release(&readyq_lock);
+        return 0;
+    }
+    
+    struct proc *p = head; 
+    
+    if (head == tail) {
+        // last process in the list
+        // empty list
+        head = tail = 0;
+    }
+    else {
+        head = head->next;
+    }
+
+    release(&readyq_lock);
+    
+    return p;
+}
+
 // Allocate a page for each process's kernel stack.
 // Map it high in memory, followed by an invalid
 // guard page.
@@ -50,6 +94,7 @@ procinit(void)
   
   initlock(&pid_lock, "nextpid");
   initlock(&wait_lock, "wait_lock");
+  initlock(&readyq_lock, "readyq_lock");
   for(p = proc; p < &proc[NPROC]; p++) {
       initlock(&p->lock, "proc");
       p->kstack = KSTACK((int) (p - proc));
@@ -244,6 +289,8 @@ userinit(void)
 
   p->state = RUNNABLE;
 
+  push_readyq(p);
+
   release(&p->lock);
 }
 
@@ -313,6 +360,7 @@ fork(void)
 
   acquire(&np->lock);
   np->state = RUNNABLE;
+  push_readyq(np);
   release(&np->lock);
 
   return pid;
@@ -445,8 +493,11 @@ scheduler(void)
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
 
-    for(p = proc; p < &proc[NPROC]; p++) {
+    p = pop_readyq();
+    
+    if (p) {
       acquire(&p->lock);
+      
       if(p->state == RUNNABLE) {
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
@@ -459,6 +510,7 @@ scheduler(void)
         // It should have changed its p->state before coming back.
         c->proc = 0;
       }
+      
       release(&p->lock);
     }
   }
@@ -498,6 +550,7 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
+  push_readyq(p);
   sched();
   release(&p->lock);
 }
@@ -566,6 +619,7 @@ wakeup(void *chan)
       acquire(&p->lock);
       if(p->state == SLEEPING && p->chan == chan) {
         p->state = RUNNABLE;
+        push_readyq(p);
       }
       release(&p->lock);
     }
@@ -587,6 +641,7 @@ kill(int pid)
       if(p->state == SLEEPING){
         // Wake process from sleep().
         p->state = RUNNABLE;
+        push_readyq(p);
       }
       release(&p->lock);
       return 0;
