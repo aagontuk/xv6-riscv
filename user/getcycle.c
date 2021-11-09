@@ -17,11 +17,12 @@ int main(int argc, char *argv[]) {
   }
   printf("cycle opened\n"); 
 
-  if (read(fd, &cycle, 8) < 0) {
-    printf("Read failed!\n");
+  for (int i = 0; i < 5; i++) {
+    if (read(fd, &cycle, 8) < 0) {
+      printf("Read failed!\n");
+    }
+    printf("cycle: %l\n", cycle);
   }
-  
-  printf("cycle: %l\n", cycle);
   
   if (write(fd, (int *)0, 0) < 0) {
     printf("Write failed!\n");
