@@ -5,6 +5,7 @@ OBJS = \
   $K/entry.o \
   $K/start.o \
   $K/console.o \
+  $K/cycle.o \
   $K/printf.o \
   $K/uart.o \
   $K/kalloc.o \
@@ -135,6 +136,7 @@ UPROGS=\
 	$U/_pipetest\
 	$U/_uptimetest\
 	$U/_test\
+	$U/_getcycle\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)

@@ -23,6 +23,11 @@ main(void)
   dup(0);  // stdout
   dup(0);  // stderr
 
+  // cycle device node
+  if (open("cycle", O_RDONLY) < 0) {
+    mknod("cycle", CYCLE, 0); 
+  }
+
   for(;;){
     printf("init: starting sh\n");
     pid = fork();
