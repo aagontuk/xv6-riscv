@@ -28,6 +28,20 @@ main(void)
     mknod("cycle", CYCLE, 0); 
   }
 
+  // create all the barrier device nodes
+  mknod("barrier0", BR0, 0); 
+  /*
+  mknod("barrier1", BR1, 0); 
+  mknod("barrier2", BR2, 0); 
+  mknod("barrier3", BR3, 0); 
+  mknod("barrier4", BR4, 0); 
+  mknod("barrier5", BR5, 0); 
+  mknod("barrier6", BR6, 0); 
+  mknod("barrier7", BR7, 0); 
+  mknod("barrier8", BR8, 0); 
+  mknod("barrier9", BR9, 0); 
+  */
+
   for(;;){
     printf("init: starting sh\n");
     pid = fork();

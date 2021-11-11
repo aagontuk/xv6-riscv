@@ -39,3 +39,15 @@ extern struct devsw devsw[];
 
 #define CONSOLE 1
 #define CYCLE 2
+#define BR0 3
+/*
+#define BR1 4
+#define BR2 5
+#define BR3 6
+#define BR4 7
+#define BR5 8
+#define BR6 9
+#define BR7 10
+#define BR8 11
+#define BR9 12
+*/

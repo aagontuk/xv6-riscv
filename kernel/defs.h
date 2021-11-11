@@ -25,6 +25,9 @@ void            consputc(int);
 // cycle.c
 void            cycleinit(void);
 
+// barrier.c
+void         barrierinit(void);
+
 // exec.c
 int             exec(char*, char**);
 
