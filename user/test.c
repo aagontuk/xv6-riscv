@@ -3,15 +3,23 @@
 
 int main() {
   int pid;
+  int nchild = 5;
+  int status;
 
-  pid = fork();
-
-  if (pid == 0) {
-    printf("hello from child!\n");  
+  for (int i = 0; i < nchild; i++) {
+    pid = fork(); 
+    if (!pid) {
+      printf("I am child %d\n", i);
+      exit(i);
+    }
   }
-  else {
-    printf("hello from parent!\n");
-    wait((int *)0); 
+
+  if (pid != 0) {
+    printf("I am parent!\n"); 
+    for (int i = 0; i < nchild; i++) {
+      wait(&status);
+      printf("child %d exited!\n", status);
+    }
   }
 
   exit(0);
