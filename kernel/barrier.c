@@ -8,44 +8,54 @@
 #include "defs.h"
 
 struct barrier {
-  struct spinlock block;
-  int chan;
+  struct spinlock lock;
+  int nsleeping;
 };
 
-struct barrier br0;
+struct barrier br[NBDEV]; // NBDEV in param.h
 
-int barrierread(int user_dst, uint64 dst, int n) {
-  int awakened_process = 0;
+int barrierread(short minor, int user_dst, uint64 dst, int n) {
+  // Only reading 4 bytes is allowed
+  if (n != 4)
+    return -1;
   
-  acquire(&br0.block);
-  br0.chan++;
-  printf("chan: %d\n", br0.chan);
-  sleep(&br0.chan, &br0.block);
+  acquire(&br[minor].lock);
+  br[minor].nsleeping++;
+  sleep(&br[minor].nsleeping, &br[minor].lock);
 
-  awakened_process = br0.chan;
-  br0.chan--;
-  printf("chan: %d\n", br0.chan);
-  printf("awak: %d\n", awakened_process);
-  release(&br0.block);
+  // copy number of awakened processes into user buffer
+  if (either_copyout(user_dst, dst, &br[minor].nsleeping, 4) == -1) {
+    br[minor].nsleeping--; 
+    release(&br[minor].lock);
+    return -1;
+  }
+
+  br[minor].nsleeping--;
+  release(&br[minor].lock);
   
   return 4;
 }
 
-int barrierwrite(int user_dst, uint64 dst, int n) {
-  printf("waking up\n");
-  wakeup(&br0.chan);
+int barrierwrite(short minor, int user_dst, uint64 dst, int n) {
+  // Only writing 4 bytes is allowed
+  if (n != 4)
+    return -1;
+
+  // wakeup all the process currently sleeping on minor barrier
+  wakeup(&br[minor].nsleeping);
 
   return 4;
 }
 
 void barrierinit(void) {
-  /*
-  for (int i = BR0; i <= BR9; i++) {
-    devsw[i].read = barrierread;
-    devsw[i].write = barrierwrite;
+  devsw[BARRIER].read = barrierread;
+  devsw[BARRIER].write = barrierwrite;
+  
+  // initialize locks for all the devices
+  char *names[] = {"brlk0", "brlk1", "brlk2", "brlk3", "brlk4",
+                   "brlk5", "brlk6", "brlk7", "brlk8", "brlk9"};
+  
+  for (int i = 0; i < NBDEV; i++) {
+    initlock(&br[i].lock, names[i]);
   }
-  */
-  devsw[BR0].read = barrierread;
-  devsw[BR0].write = barrierwrite;
-  initlock(&br0.block, "br0lock");
 }

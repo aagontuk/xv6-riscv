@@ -8,6 +8,7 @@
 #include "kernel/file.h"
 #include "user/user.h"
 #include "kernel/fcntl.h"
+#include "kernel/param.h"
 
 char *argv[] = { "sh", 0 };
 
@@ -29,18 +30,12 @@ main(void)
   }
 
   // create all the barrier device nodes
-  mknod("barrier0", BR0, 0); 
-  /*
-  mknod("barrier1", BR1, 0); 
-  mknod("barrier2", BR2, 0); 
-  mknod("barrier3", BR3, 0); 
-  mknod("barrier4", BR4, 0); 
-  mknod("barrier5", BR5, 0); 
-  mknod("barrier6", BR6, 0); 
-  mknod("barrier7", BR7, 0); 
-  mknod("barrier8", BR8, 0); 
-  mknod("barrier9", BR9, 0); 
-  */
+  char *names[] = {"barrier0", "barrier1", "barrier2", "barrier3",
+                    "barrier4", "barrier5", "barrier6", "barrier7",
+                    "barrier8", "barrier9"};
+  
+  for (int i = 0; i < NBDEV; i++)
+    mknod(names[i], BARRIER, i); 
 
   for(;;){
     printf("init: starting sh\n");
