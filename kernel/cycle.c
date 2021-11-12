@@ -14,7 +14,7 @@ unsigned long rdcycle(void) {
 }
 
 // Read 8 byte from csrrs reg
-int cycleread(int user_dst, uint64 dst, int n) {
+int cycleread(short minor, int user_dst, uint64 dst, int n) {
   // cycle will only read 8 bytes
   if (n != 8)
     return -1;
@@ -30,7 +30,7 @@ int cycleread(int user_dst, uint64 dst, int n) {
 
 // Write is not allowed
 // This is only here to fail
-int cyclewirte(int user_dst, uint64 dst, int n) {
+int cyclewirte(short monor, int user_dst, uint64 dst, int n) {
   return -1;
 }
 
