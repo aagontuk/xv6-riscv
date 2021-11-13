@@ -10,6 +10,7 @@
 struct barrier {
   struct spinlock lock;
   int nsleeping;
+  int awakened;
 };
 
 struct barrier br[NBDEV]; // NBDEV in param.h
@@ -24,7 +25,7 @@ int barrierread(short minor, int user_dst, uint64 dst, int n) {
   sleep(&br[minor].nsleeping, &br[minor].lock);
 
   // copy number of awakened processes into user buffer
-  if (either_copyout(user_dst, dst, &br[minor].nsleeping, 4) == -1) {
+  if (either_copyout(user_dst, dst, &br[minor].awakened, 4) == -1) {
     br[minor].nsleeping--; 
     release(&br[minor].lock);
     return -1;
@@ -41,8 +42,12 @@ int barrierwrite(short minor, int user_dst, uint64 dst, int n) {
   if (n != 4)
     return -1;
 
+  acquire(&br[minor].lock);
   // wakeup all the process currently sleeping on minor barrier
   wakeup(&br[minor].nsleeping);
+  // Record all sleeping processes when wakeup called
+  br[minor].awakened = br[minor].nsleeping;
+  release(&br[minor].lock);
 
   return 4;
 }
