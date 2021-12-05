@@ -202,6 +202,8 @@ commit()
   }
 }
 
+// Add new block to in memory log header if it's not there already
+//
 // Caller has modified b->data and is done with the buffer.
 // Record the block number and pin in the cache by increasing refcnt.
 // commit()/write_log() will do the disk write.

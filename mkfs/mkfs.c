@@ -20,7 +20,7 @@
 // Disk layout:
 // [ boot block | sb block | log | inode blocks | free bit map | data blocks ]
 
-int nbitmap = FSSIZE/(BSIZE*8) + 1;
+int nbitmap = FSSIZE/(BSIZE*8) + 1;     // number of bitmap blocks
 int ninodeblocks = NINODES / IPB + 1;
 int nlog = LOGSIZE;
 int nmeta;    // Number of meta blocks (boot, sb, nlog, inode, bitmap)
