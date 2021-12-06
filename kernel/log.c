@@ -175,6 +175,10 @@ end_op(void)
 }
 
 // Copy modified blocks from cache to log.
+// 
+// For all the modified blocks
+//  1. Copy modified block to in-memory log block
+//  2. Write the log block to disk.
 static void
 write_log(void)
 {
@@ -189,6 +193,15 @@ write_log(void)
     brelse(to);
   }
 }
+
+// Commit a log
+//  1. Write modified blocks to log in-mem blocks
+//     and in-mem log blocks to disk log blocks.
+//  2. Write current state of log header to disk
+//  3. Copy log blocks to their destination blocks
+//  4. Reset in-mem log header to zero.
+//  5. Reset disk log header to zero by writing
+//     log header to disk.
 
 static void
 commit()
