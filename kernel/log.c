@@ -34,11 +34,10 @@
 // and to keep track in memory of logged block# before commit.
 struct logheader {
   int n;
-  int block[LOGSIZE];
+  int block[LOGSIZE_INDIV];
 };
 
 struct log {
-  struct spinlock lock;
   int start;
   int size;
   int outstanding; // how many FS sys calls are executing.
@@ -46,7 +45,10 @@ struct log {
   int dev;
   struct logheader lh;
 };
-struct log log;
+
+struct log logs[NLOGS];
+int curlog_no = 0;
+struct spinlock lock;
 
 static void recover_from_log(void);
 static void commit();
@@ -56,11 +58,15 @@ initlog(int dev, struct superblock *sb)
 {
   if (sizeof(struct logheader) >= BSIZE)
     panic("initlog: too big logheader");
+    
+  initlock(&lock, "log");
 
-  initlock(&log.lock, "log");
-  log.start = sb->logstart;
-  log.size = sb->nlog;
-  log.dev = dev;
+  for (int i = 0; i < NLOGS; i++) {
+    logs[i].start = sb->logstart + (i * LOGSIZE_INDIV);
+    logs[i].size = sb->nlog / NLOGS;
+    logs[i].dev = dev;
+  }
+
   recover_from_log();
 }
 
@@ -123,19 +129,39 @@ recover_from_log(void)
 }
 
 // called at the start of each FS system call.
+// WIP
 void
 begin_op(void)
 {
-  acquire(&log.lock);
+  acquire(&lock);
   while(1){
-    if(log.committing){
-      sleep(&log, &log.lock);
-    } else if(log.lh.n + (log.outstanding+1)*MAXOPBLOCKS > LOGSIZE){
+    int should_sleep = 1;
+    if(logs[curlog_no].committing){
+      // work with new log
+      // if all committing sleep
+      if(curlog_no < NLOGS)
+        curlog_no++;  
+        should_sleep = 0;
+      else
+        sleep(&logs, &lock);
+
+    } else if(logs[curlog_no].lh.n + 
+        (logs[curlog_no].outstanding+1)*MAXOPBLOCKS > LOGSIZE_INDIV){
+      
       // this op might exhaust log space; wait for commit.
-      sleep(&log, &log.lock);
-    } else {
-      log.outstanding += 1;
-      release(&log.lock);
+      // work with new log
+      // if all full sleep
+      if(curlog_no < NLOGS)
+        curlog_no++;  
+        should_sleep = 0;
+      else
+        sleep(&logs, &lock);
+
+    }
+
+    if(!should_sleep) {
+      logs[curlog_no].outstanding += 1;
+      release(&lock);
       break;
     }
   }
@@ -143,6 +169,14 @@ begin_op(void)
 
 // called at the end of each FS system call.
 // commits if this was the last outstanding operation.
+//
+// Protocol:
+//  * Decrement first log
+//  * If it reaches zero commit
+//  * Decrement 2nd log, if zero commit
+//  * Same for other logs
+//  * Only one decrement per end_op
+//  * if it is the last log set curlog back to zero
 void
 end_op(void)
 {
