@@ -59,6 +59,7 @@ static void commit();
 void
 initlog(int dev, struct superblock *sb)
 {
+  printf("Initializing log...\n");
   if (sizeof(struct logheader) >= BSIZE)
     panic("initlog: too big logheader");
     
@@ -70,7 +71,9 @@ initlog(int dev, struct superblock *sb)
     logs[i].dev = dev;
   }
 
+  printf("recovering log...\n");
   recover_from_log();
+  printf("recovery done!\n");
 }
 
 // Copy committed blocks from log to their home location
