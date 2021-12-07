@@ -140,19 +140,18 @@ recover_from_log(void)
 }
 
 // called at the start of each FS system call.
-// WIP
 void
 begin_op(void)
 {
   acquire(&lock);
   while(1){
-    int should_sleep = 1;
+    int sleeping = 1;
     if(logs[curlog].committing){
-      // work with new log
-      // if all committing sleep
+      // Work with new log
+      // sleep if there is none
       if(curlog < NLOGS) {
         curlog++;  
-        should_sleep = 0;
+        sleeping = 0;
       }
       else {
         sleep(&logs, &lock);
@@ -163,10 +162,10 @@ begin_op(void)
       
       // this op might exhaust log space; wait for commit.
       // work with new log
-      // if all full sleep
+      // sleep if there is none
       if(curlog < NLOGS) {
         curlog++;  
-        should_sleep = 0;
+        sleeping = 0;
       }
       else {
         sleep(&logs, &lock);
@@ -174,7 +173,7 @@ begin_op(void)
 
     }
 
-    if(!should_sleep) {
+    if(!sleeping) {
       logs[curlog].outstanding += 1;
       release(&lock);
       break;
@@ -220,6 +219,13 @@ end_op(void)
     acquire(&lock);
     logs[curcommit].committing = 0;
     curcommit++;
+
+    // All commit done! Reset.
+    if (curcommit == NLOGS) {
+      curcommit = 0; 
+      curlog = 0;
+    }
+
     wakeup(&logs);
     release(&lock);
   }
@@ -285,7 +291,7 @@ log_write(struct buf *b)
   struct log *lg = &logs[curlog];
 
   acquire(&lock);
-  if (lg->lh.n >= LOGSIZE || lg->lh.n >= lg->size - 1)
+  if (lg->lh.n >= LOGSIZE_INDIV || lg->lh.n >= (lg->size / 4) - 1)
     panic("too big a transaction");
   if (lg->outstanding < 1)
     panic("log_write outside of trans");
