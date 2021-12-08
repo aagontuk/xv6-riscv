@@ -59,7 +59,6 @@ static void commit();
 void
 initlog(int dev, struct superblock *sb)
 {
-  printf("Initializing log...\n");
   if (sizeof(struct logheader) >= BSIZE)
     panic("initlog: too big logheader");
     
@@ -71,9 +70,7 @@ initlog(int dev, struct superblock *sb)
     logs[i].dev = dev;
   }
 
-  printf("recovering log...\n");
   recover_from_log();
-  printf("recovery done!\n");
 }
 
 // Copy committed blocks from log to their home location
@@ -148,7 +145,7 @@ begin_op(void)
 {
   acquire(&lock);
   while(1){
-    int sleeping = 1;
+    int sleeping = 0;
     if(logs[curlog].committing){
       // Work with new log
       // sleep if there is none
@@ -158,6 +155,7 @@ begin_op(void)
       }
       else {
         sleep(&logs, &lock);
+        sleeping = 1;
       }
 
     } else if(logs[curlog].lh.n + 
@@ -172,6 +170,7 @@ begin_op(void)
       }
       else {
         sleep(&logs, &lock);
+        sleeping = 1;
       }
 
     }
@@ -221,7 +220,12 @@ end_op(void)
     commit();
     acquire(&lock);
     logs[curcommit].committing = 0;
-    curcommit++;
+    
+    // Start commit next log if there is any outstanding
+    // operation on the next log
+    if(curlog > curcommit) {
+      curcommit++;
+    }
 
     // All commit done! Reset.
     if (curcommit == NLOGS) {
@@ -291,9 +295,10 @@ void
 log_write(struct buf *b)
 {
   int i;
-  struct log *lg = &logs[curlog];
 
   acquire(&lock);
+  struct log *lg = &logs[curlog];
+  
   if (lg->lh.n >= LOGSIZE_INDIV || lg->lh.n >= (lg->size / 4) - 1)
     panic("too big a transaction");
   if (lg->outstanding < 1)
