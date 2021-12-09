@@ -68,6 +68,7 @@ initlog(int dev, struct superblock *sb)
     logs[i].start = sb->logstart + (i * LOGSIZE_INDIV);
     logs[i].size = sb->nlog / NLOGS;
     logs[i].dev = dev;
+    printf("logstart: %d -- logsize: %d -- logdev: %d\n", logs[i].start, logs[i].size, logs[i].dev);
   }
 
   recover_from_log();
@@ -149,11 +150,13 @@ begin_op(void)
     if(logs[curlog].committing){
       // Work with new log
       // sleep if there is none
-      if(curlog < NLOGS) {
+      if(curlog < (NLOGS - 1)) {
+        printf("begin_op[%d]: committing", curlog);
         curlog++;  
         sleeping = 0;
       }
       else {
+        printf("begin_op[%d]: no more logs 1\n", curlog);
         sleep(&logs, &lock);
         sleeping = 1;
       }
@@ -164,11 +167,13 @@ begin_op(void)
       // this op might exhaust log space; wait for commit.
       // work with new log
       // sleep if there is none
-      if(curlog < NLOGS) {
+      if(curlog < (NLOGS - 1)) {
+        printf("begin_op[%d]: full\n", curlog);
         curlog++;  
         sleeping = 0;
       }
       else {
+        printf("begin_op[%d]: full but no more logs\n", curlog);
         sleep(&logs, &lock);
         sleeping = 1;
       }
@@ -176,7 +181,9 @@ begin_op(void)
     }
 
     if(!sleeping) {
+      printf("begin_op[%d]: outstanding: %d\n", curlog, logs[curlog].outstanding);
       logs[curlog].outstanding += 1;
+      printf("begin_op[%d]: outstanding: %d\n", curlog, logs[curlog].outstanding);
       release(&lock);
       break;
     }
@@ -199,7 +206,10 @@ end_op(void)
   int do_commit = 0;
 
   acquire(&lock);
+  printf("befcom: curcommit: %d -- curlog: %d\n", curcommit, curlog);
+  printf("end_op: outstanding: %d\n", logs[curcommit].outstanding);
   logs[curcommit].outstanding -= 1;
+  printf("end_op: outstanding: %d\n", logs[curcommit].outstanding);
   if(logs[curcommit].committing)
     panic("log.committing");
   if(logs[curcommit].outstanding == 0){
@@ -215,9 +225,13 @@ end_op(void)
   release(&lock);
 
   if(do_commit){
+    printf("sttcom: curcommit: %d -- curlog: %d\n", curcommit, curlog);
     // call commit w/o holding locks, since not allowed
     // to sleep with locks.
+    // This is ok to do because number of threads entered begin_op
+    // is equal to the number of thread enters end_op
     commit();
+    printf("comcom: curcommit: %d -- curlog: %d\n", curcommit, curlog);
     acquire(&lock);
     logs[curcommit].committing = 0;
     
@@ -228,10 +242,11 @@ end_op(void)
     }
 
     // All commit done! Reset.
-    if (curcommit == NLOGS) {
+    if (curcommit == (NLOGS - 1)) {
       curcommit = 0; 
       curlog = 0;
     }
+    printf("aftcom: curcommit: %d -- curlog: %d\n", curcommit, curlog);
 
     wakeup(&logs);
     release(&lock);
@@ -299,8 +314,10 @@ log_write(struct buf *b)
   acquire(&lock);
   struct log *lg = &logs[curlog];
   
-  if (lg->lh.n >= LOGSIZE_INDIV || lg->lh.n >= (lg->size / 4) - 1)
+  if (lg->lh.n >= LOGSIZE_INDIV || lg->lh.n >= lg->size - 1){
+    printf("curlog: %d lh.n: %d lg->size: %d\n", curlog, lg->lh.n, lg->size);
     panic("too big a transaction");
+  }
   if (lg->outstanding < 1)
     panic("log_write outside of trans");
 
