@@ -12,5 +12,5 @@
 #define NLOGS        4  // Number of logs in the system
 #define LOGSIZE      (NLOGS*LOGSIZE_INDIV)  // max data blocks in on-disk log
 #define NBUF         (MAXOPBLOCKS*3)  // size of disk block cache
-#define FSSIZE       1000  // size of file system in blocks
+#define FSSIZE       2000  // size of file system in blocks
 #define MAXPATH      128   // maximum file path name
