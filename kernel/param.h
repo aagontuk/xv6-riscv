@@ -14,3 +14,6 @@
 #define NBUF         (MAXOPBLOCKS*3)  // size of disk block cache
 #define FSSIZE       2000  // size of file system in blocks
 #define MAXPATH      128   // maximum file path name
+#define MAX_RING_NAME 16  // magic ring buffer name size
+#define RINGBUF_SIZE 16
+#define MAX_RINGBUFS 10

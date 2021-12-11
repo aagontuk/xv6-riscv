@@ -455,6 +455,38 @@ sys_exec(void)
   return -1;
 }
 
+uint64 sys_ringbuf(void) {
+  char ringname[MAX_RING_NAME]; // ring name
+  int type;  // system call type: 1 open or 0 close
+  uint64 buf; // user supplied pointer to hold the address of the ringbuf
+  uint64 addr;
+  struct proc *p = myproc();
+
+  if (argstr(0, ringname, MAX_RING_NAME) < 0) {
+    return -1; 
+  }
+
+  if (argint(1, &type) < 0) {
+    return -1; 
+  }
+
+  if (argaddr(2, &buf) < 0) {
+    return -1; 
+  }
+
+  if (create_ringbuf(ringname, type, &addr) < 0) {
+    return -1; 
+  }
+
+  if (copyout(p->pagetable, buf, (char *)&addr, sizeof(addr)) < 0) {
+    printf("Can't copy from k to u\n");
+    return -1;
+  }
+
+  return 0;    
+}
+
+
 uint64
 sys_pipe(void)
 {

@@ -19,6 +19,7 @@ entry("fork");
 entry("exit");
 entry("wait");
 entry("pipe");
+entry("ringbuf");
 entry("read");
 entry("write");
 entry("close");

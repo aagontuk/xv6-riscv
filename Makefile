@@ -14,6 +14,7 @@ OBJS = \
   $K/string.o \
   $K/main.o \
   $K/vm.o \
+	$K/ringbuf.o \
   $K/proc.o \
   $K/swtch.o \
   $K/trampoline.o \
@@ -89,7 +90,7 @@ $U/initcode: $U/initcode.S
 tags: $(OBJS) _init
 	etags *.S *.c
 
-ULIB = $U/ulib.o $U/usys.o $U/printf.o $U/umalloc.o
+ULIB = $U/ulib.o $U/usys.o $U/printf.o $U/umalloc.o $U/libring.o
 
 _%: %.o $(ULIB)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
@@ -139,6 +140,7 @@ UPROGS=\
 	$U/_test\
 	$U/_getcycle\
 	$U/_barriertest\
+	$U/_ringtest\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
